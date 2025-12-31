@@ -14,14 +14,14 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props 
 }) => {
-  const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-stone-900 rounded-lg";
+  const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-stone-950 rounded-lg";
   
   const variants = {
-    primary: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20",
+    primary: "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 border border-amber-500/20",
     secondary: "bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700",
-    danger: "bg-red-900/30 hover:bg-red-900/50 text-red-300 border border-red-900/50",
-    ghost: "bg-transparent hover:bg-stone-800 text-stone-400 hover:text-stone-200",
-    zen: "bg-stone-800/50 hover:bg-stone-800 text-emerald-400 border border-emerald-900/30 hover:border-emerald-500/50",
+    danger: "bg-red-900/20 hover:bg-red-900/40 text-red-300 border border-red-900/30",
+    ghost: "bg-transparent hover:bg-stone-800/50 text-stone-400 hover:text-amber-400",
+    zen: "bg-stone-900/50 hover:bg-stone-800 text-amber-500 border border-amber-900/30 hover:border-amber-500/50",
   };
 
   const sizes = {

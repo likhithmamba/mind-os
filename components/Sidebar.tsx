@@ -1,146 +1,182 @@
 import React from 'react';
 import { ThoughtNode, NodeType } from '../types';
-import { Brain, Sparkles, Rewind, Layers, GripVertical } from 'lucide-react';
+import { Sparkles, Database, GripVertical, Trash2, Layout, Shield } from 'lucide-react';
 import { Button } from './Button';
-import { getStorageSize, generateHeatmapData, getReflections, downloadBackup } from '../utils';
 
 interface SidebarProps {
   nodes: ThoughtNode[];
-  onNodeClick: (node: ThoughtNode) => void;
-  onAddInbox: () => void;
+  onPickupNode: (node: ThoughtNode) => void;
+  carryingNode: ThoughtNode | null;
+  onDeleteNode: (id: string) => void;
+  storageStats: { usedKB: string; percent: number };
+  onBackup: () => void;
+  onWipe: () => void;
   onRestore: (file: File) => void;
+  appMode: string;
+  setAppMode: (mode: string) => void;
 }
+
+const ImperialShieldLogo = () => (
+  <svg width="40" height="48" viewBox="0 0 50 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+    <defs>
+      <linearGradient id="silverGradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#e5e5e5" />
+        <stop offset="50%" stopColor="#737373" />
+        <stop offset="100%" stopColor="#262626" />
+      </linearGradient>
+    </defs>
+    <path d="M25 58L4 46V14L25 2L46 14V46L25 58Z" stroke="url(#silverGradient)" strokeWidth="3" fill="rgba(0,0,0,0.2)"/>
+    <g transform="translate(14, 16)">
+       <path d="M2 0V28" stroke="url(#silverGradient)" strokeWidth="3" strokeLinecap="square"/>
+       <path d="M20 0V28" stroke="url(#silverGradient)" strokeWidth="3" strokeLinecap="square"/>
+       <path d="M2 28L20 0" stroke="url(#silverGradient)" strokeWidth="3" strokeLinecap="square"/>
+    </g>
+  </svg>
+);
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   nodes, 
-  onNodeClick, 
-  onAddInbox,
-  onRestore
+  onPickupNode,
+  carryingNode,
+  onDeleteNode,
+  storageStats,
+  onBackup,
+  onWipe,
+  onRestore,
+  appMode,
+  setAppMode
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const inboxNodes = nodes.filter(n => !n.date);
-  const heatmapData = generateHeatmapData(nodes);
-  const reflections = getReflections(nodes);
-  const storageInfo = getStorageSize();
-
-  const handleDragStart = (e: React.DragEvent, nodeId: string) => {
-    e.dataTransfer.setData('nodeId', nodeId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onRestore(e.target.files[0]);
-    }
-  };
 
   return (
-    <div className="w-full md:w-80 flex flex-col h-full bg-[#18181b] border-r border-stone-800 overflow-y-auto custom-scrollbar">
+    <div className="w-full md:w-80 flex flex-col h-full bg-[#0c0a09] border-r border-stone-800">
       
-      {/* Header */}
-      <div className="p-6 border-b border-stone-800">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 bg-stone-800 rounded-lg">
-            <Brain size={20} className="text-emerald-400" />
+      <div className="p-8 flex flex-col items-center border-b border-stone-800/50 bg-gradient-to-b from-stone-900/50 to-transparent">
+        <div className="mb-4 transform hover:scale-105 transition-transform duration-500">
+          <ImperialShieldLogo />
+        </div>
+        <div className="text-center">
+          <h1 className="text-3xl font-display font-bold text-stone-200 tracking-widest leading-none drop-shadow-md">IMPERIAL</h1>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <div className="h-[1px] w-8 bg-gradient-to-r from-transparent via-amber-700 to-transparent"></div>
+            <span className="text-sm font-display font-bold text-amber-500 tracking-[0.3em]">OS</span>
+            <div className="h-[1px] w-8 bg-gradient-to-r from-transparent via-amber-700 to-transparent"></div>
           </div>
-          <h1 className="text-xl font-bold text-stone-100 tracking-tight">Mind-OS</h1>
-        </div>
-        <p className="text-xs text-stone-500 font-mono pl-1">v2.0 // Cognitive Calendar</p>
-      </div>
-
-      {/* Memory Heatmap */}
-      <div className="p-6 border-b border-stone-800">
-        <div className="flex items-center gap-2 mb-4 text-stone-400">
-          <Layers size={14} />
-          <h3 className="text-xs font-bold uppercase tracking-widest">Idea Density</h3>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {heatmapData.map((point, i) => (
-            <div 
-              key={i}
-              title={`${point.date}: ${point.count} nodes`}
-              className={`w-2.5 h-2.5 rounded-sm transition-colors ${
-                point.intensity === 0 ? 'bg-stone-800' :
-                point.intensity === 1 ? 'bg-emerald-900' :
-                point.intensity === 2 ? 'bg-emerald-700' :
-                point.intensity === 3 ? 'bg-emerald-500' : 'bg-emerald-300'
-              }`}
-            />
-          ))}
         </div>
       </div>
 
-      {/* Reflection Engine */}
-      {reflections.length > 0 && (
-        <div className="p-6 border-b border-stone-800 bg-stone-900/30">
-          <div className="flex items-center gap-2 mb-3 text-fuchsia-400">
-            <Rewind size={14} />
-            <h3 className="text-xs font-bold uppercase tracking-widest">Look Back</h3>
-          </div>
-          <div className="space-y-3">
-            {reflections.map((ref, idx) => (
-              <div 
-                key={idx} 
-                onClick={() => onNodeClick(ref.node)}
-                className="group cursor-pointer p-3 rounded-lg border border-stone-800 hover:border-fuchsia-500/30 hover:bg-stone-800/50 transition-all"
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] text-stone-500 uppercase font-mono">{ref.label}</span>
-                  <span className="text-[10px] text-fuchsia-400">Recall</span>
-                </div>
-                <div className="text-sm text-stone-300 font-medium truncate">{ref.node.title}</div>
-              </div>
-            ))}
-          </div>
+      <div className="flex-1 overflow-hidden flex flex-col px-5 py-6">
+        <div className="flex items-center gap-2.5 mb-5 px-1 text-stone-400">
+          <Sparkles size={16} className="text-amber-600" />
+          <h3 className="text-xs font-bold uppercase tracking-widest font-display">Thought Reserve</h3>
         </div>
-      )}
 
-      {/* Idea Inbox (Scratchpad) */}
-      <div className="flex-1 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-amber-400">
-            <Sparkles size={14} />
-            <h3 className="text-xs font-bold uppercase tracking-widest">Idea Inbox</h3>
-          </div>
-          <span className="text-xs text-stone-600">{inboxNodes.length}</span>
-        </div>
-        
-        <div className="space-y-2 min-h-[100px]">
+        <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar p-1">
+          {inboxNodes.length === 0 && (
+            <div className="text-center p-8 border border-dashed border-stone-800/50 rounded-xl bg-stone-900/20">
+              <p className="text-sm text-stone-500 font-display">Reserve Empty</p>
+              <p className="text-xs text-stone-600 mt-2 leading-relaxed">Thoughts without dates dwell here until summoned.</p>
+            </div>
+          )}
+          
           {inboxNodes.map(node => (
             <div
               key={node.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, node.id)}
-              onClick={() => onNodeClick(node)}
-              className="flex items-center gap-2 p-3 bg-stone-800/50 border border-stone-800 rounded-lg hover:border-amber-500/30 hover:bg-stone-800 cursor-move group transition-all active:cursor-grabbing"
+              draggable="true"
+              onDragStart={(e) => {
+                onPickupNode(node);
+                e.dataTransfer.setData('text/plain', node.id);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onClick={() => onPickupNode(node)}
+              className={`
+                group relative p-3.5 rounded-lg border transition-all duration-300 cursor-grab active:cursor-grabbing
+                ${carryingNode?.id === node.id 
+                  ? 'bg-amber-900/80 border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.3)] transform scale-105 z-10' 
+                  : 'bg-stone-900/40 border-stone-800 hover:border-stone-600 hover:bg-stone-800'}
+              `}
             >
-              <GripVertical size={14} className="text-stone-600 group-hover:text-stone-400" />
-              <span className="text-sm text-stone-300 truncate">{node.title || 'Untitled Idea'}</span>
+              <div className="flex items-start gap-3">
+                <GripVertical size={16} className="text-stone-600 mt-0.5 group-hover:text-stone-400 transition-colors" />
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-semibold font-display truncate ${carryingNode?.id === node.id ? 'text-white' : 'text-stone-300'}`}>
+                    {node.title || 'Untitled'}
+                  </div>
+                  <div className={`text-xs truncate mt-1 capitalize tracking-wide font-medium ${carryingNode?.id === node.id ? 'text-amber-200' : 'text-stone-500 group-hover:text-stone-400'}`}>
+                    {node.type}
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
+                className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-900/30 rounded text-stone-500 hover:text-red-400 transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           ))}
-          <button 
-            onClick={onAddInbox}
-            className="w-full py-2 border border-dashed border-stone-700 rounded-lg text-xs text-stone-500 hover:text-stone-300 hover:border-stone-500 transition-colors"
-          >
-            + Jot down quick idea
-          </button>
         </div>
       </div>
 
-      {/* Footer / Storage */}
-      <div className="p-6 border-t border-stone-800 bg-stone-900/50">
-         <div className="flex justify-between items-center text-xs text-stone-500 mb-2">
-           <span>Local Storage</span>
-           <span>{storageInfo.size}</span>
-         </div>
-         <div className="w-full bg-stone-800 h-1 rounded-full mb-4">
-           <div className="bg-stone-600 h-full rounded-full" style={{ width: `${storageInfo.percent}%` }}></div>
-         </div>
-         <div className="flex gap-2">
-            <Button variant="secondary" size="sm" className="flex-1" onClick={() => downloadBackup(nodes)}>Backup</Button>
-            <Button variant="secondary" size="sm" className="flex-1" onClick={() => fileInputRef.current?.click()}>Restore</Button>
-            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileChange} />
-         </div>
+      <div className="p-5 border-t border-stone-800 bg-stone-950">
+        <div className="glass-card rounded-xl p-5 space-y-5 border border-stone-800/60 shadow-2xl">
+          
+          {/* MODE TOGGLE */}
+          <div className="flex bg-stone-900/80 rounded-lg p-1 border border-stone-800 mb-2">
+             <button 
+                onClick={() => setAppMode('mind-os')}
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-2 ${appMode === 'mind-os' ? 'bg-amber-600 text-white shadow-md' : 'text-stone-500 hover:text-stone-300'}`}
+             >
+                <Layout size={14} /> Mind OS
+             </button>
+             <button 
+                onClick={() => setAppMode('vanguard')}
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wide rounded-md transition-all flex items-center justify-center gap-2 ${appMode === 'vanguard' ? 'bg-indigo-600 text-white shadow-md' : 'text-stone-500 hover:text-stone-300'}`}
+             >
+                <Shield size={14} /> Vanguard
+             </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-stone-500 mb-0">
+            <Database size={16} className="text-amber-700" />
+            <h3 className="text-xs font-bold uppercase tracking-widest font-display">System Status</h3>
+          </div>
+          
+          <div>
+            <div className="flex justify-between text-xs text-stone-500 mb-1.5 font-mono font-medium">
+              <span>{storageStats.usedKB} KB</span>
+              <span>{Math.round(storageStats.percent)}%</span>
+            </div>
+            <div className="w-full bg-stone-900 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-700 ease-out ${storageStats.percent > 80 ? 'bg-red-600 shadow-[0_0_10px_red]' : 'bg-amber-600 shadow-[0_0_10px_orange]'}`} 
+                style={{ width: `${Math.max(2, storageStats.percent)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={onBackup} className="text-xs bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-400 hover:text-stone-200 py-2.5 rounded-lg transition-all font-display font-bold uppercase tracking-wider">
+              Export
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} className="text-xs bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-400 hover:text-stone-200 py-2.5 rounded-lg transition-all font-display font-bold uppercase tracking-wider">
+              Import
+            </button>
+          </div>
+          <button onClick={onWipe} className="w-full text-xs text-stone-600 hover:text-red-500 transition-colors py-1.5 font-mono hover:underline decoration-red-900/50">
+            Format Drive
+          </button>
+          
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept=".json" 
+            onChange={(e) => e.target.files?.[0] && onRestore(e.target.files[0])} 
+          />
+        </div>
       </div>
     </div>
   );

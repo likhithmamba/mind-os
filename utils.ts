@@ -1,4 +1,4 @@
-import { ThoughtNode, DateCell, HeatmapPoint } from './types';
+import { ThoughtNode, DateCell, StorageStats } from './types';
 
 export const generateCalendar = (year: number, month: number): DateCell[] => {
   const firstDayOfMonth = new Date(year, month, 1);
@@ -44,81 +44,68 @@ export const toISODate = (date: Date): string => {
   return d.toISOString().split('T')[0];
 };
 
-export const getStorageSize = (): { size: string; percent: number } => {
-  let total = 0;
-  for (const key in localStorage) {
-    if (localStorage.hasOwnProperty(key)) {
-      total += (localStorage[key].length + key.length) * 2;
+export class StorageManager {
+  static KEYS = {
+    NODES: 'mind_os_nodes',
+    HABITS: 'mind_os_habits'
+  };
+
+  static getStats(nodes: ThoughtNode[]): StorageStats {
+    let total = 0;
+    for (const key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += (localStorage[key].length + key.length) * 2;
+      }
     }
+    const sizeKB = total / 1024;
+    // 5MB limit approximation
+    const percent = Math.min(100, (sizeKB / 5120) * 100);
+    
+    return {
+      usedKB: sizeKB.toFixed(2),
+      percent,
+      totalNodes: nodes.length
+    };
   }
-  const sizeKB = total / 1024;
-  const percent = Math.min(100, (sizeKB / 5120) * 100);
-  return { size: sizeKB.toFixed(2) + ' KB', percent };
+
+  static save(nodes: ThoughtNode[], habits: Record<string, boolean>) {
+    localStorage.setItem(this.KEYS.NODES, JSON.stringify(nodes));
+    localStorage.setItem(this.KEYS.HABITS, JSON.stringify(habits));
+  }
+
+  static load(): { nodes: ThoughtNode[], habits: Record<string, boolean> } {
+    const nodesStr = localStorage.getItem(this.KEYS.NODES);
+    const habitsStr = localStorage.getItem(this.KEYS.HABITS);
+    
+    return {
+      nodes: nodesStr ? JSON.parse(nodesStr) : [],
+      habits: habitsStr ? JSON.parse(habitsStr) : {}
+    };
+  }
+  
+  static wipe() {
+    localStorage.removeItem(this.KEYS.NODES);
+    localStorage.removeItem(this.KEYS.HABITS);
+  }
+}
+
+export const getRandomRecall = (nodes: ThoughtNode[]): ThoughtNode | null => {
+  if (nodes.length === 0) return null;
+  // Prefer nodes older than 14 days
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const oldNodes = nodes.filter(n => new Date(n.createdAt) < twoWeeksAgo);
+  
+  const pool = oldNodes.length > 0 ? oldNodes : nodes;
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 
-export const downloadBackup = (nodes: ThoughtNode[]) => {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
+export const downloadBackup = (data: any) => {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
   const link = document.createElement('a');
   link.setAttribute("href", dataStr);
-  link.setAttribute("download", "mind_os_backup_" + new Date().toISOString().split('T')[0] + ".json");
+  link.setAttribute("download", "mind_os_ultra_backup_" + new Date().toISOString().split('T')[0] + ".json");
   document.body.appendChild(link);
   link.click();
   link.remove();
-};
-
-// --- COGNITIVE UTILS ---
-
-export const getReflections = (nodes: ThoughtNode[]): { label: string, node: ThoughtNode }[] => {
-  const today = new Date();
-  const targets = [
-    { days: 7, label: "7 Days Ago" },
-    { days: 30, label: "30 Days Ago" },
-    { days: 90, label: "3 Months Ago" },
-    { days: 365, label: "1 Year Ago" }
-  ];
-
-  const reflections: { label: string, node: ThoughtNode }[] = [];
-
-  targets.forEach(target => {
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - target.days);
-    const iso = toISODate(pastDate);
-    
-    // Find a significant node (win or idea preferred)
-    const match = nodes.find(n => n.date === iso && (n.type === 'win' || n.type === 'idea')) 
-               || nodes.find(n => n.date === iso);
-    
-    if (match) {
-      reflections.push({ label: target.label, node: match });
-    }
-  });
-
-  return reflections;
-};
-
-export const generateHeatmapData = (nodes: ThoughtNode[]): HeatmapPoint[] => {
-  const map: Record<string, number> = {};
-  const today = new Date();
-  const oneYearAgo = new Date();
-  oneYearAgo.setDate(today.getDate() - 365);
-
-  nodes.forEach(n => {
-    if (n.date) {
-      map[n.date] = (map[n.date] || 0) + 1;
-    }
-  });
-
-  const points: HeatmapPoint[] = [];
-  for (let d = new Date(oneYearAgo); d <= today; d.setDate(d.getDate() + 1)) {
-    const iso = toISODate(d);
-    const count = map[iso] || 0;
-    let intensity: 0|1|2|3|4 = 0;
-    if (count > 0) intensity = 1;
-    if (count > 2) intensity = 2;
-    if (count > 4) intensity = 3;
-    if (count > 6) intensity = 4;
-
-    points.push({ date: iso, count, intensity });
-  }
-  return points;
 };

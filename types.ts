@@ -19,12 +19,13 @@ export interface CalendarState {
   currentDate: Date;
   selectedDate: Date | null;
   nodes: ThoughtNode[];
-  isFocusMode: boolean;
+  habits: Record<string, boolean>; // dateISO -> completed
+  isEditorOpen: boolean;
   activeNodeId: string | null;
 }
 
-export interface HeatmapPoint {
-  date: string;
-  count: number;
-  intensity: 0 | 1 | 2 | 3 | 4;
+export interface StorageStats {
+  usedKB: string;
+  percent: number;
+  totalNodes: number;
 }
